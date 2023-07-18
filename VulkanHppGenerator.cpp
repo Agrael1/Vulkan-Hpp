@@ -477,7 +477,6 @@ ${DispatchLoaderBase}
 ${DispatchLoaderStatic}
 ${DispatchLoaderDefault}
 #if !defined( VULKAN_HPP_NO_SMART_HANDLE )
-${SharedDefinitions}
 ${ObjectDestroy}
 ${ObjectFree}
 ${ObjectRelease}
@@ -561,7 +560,6 @@ ${DispatchLoaderDynamic}
                       { "resultExceptions", generateResultExceptions() },
                       { "structExtendsStructs", generateStructExtendsStructs() },
                       { "ResultValue", readSnippet( "ResultValue.hpp" ) },
-                      { "SharedDefinitions", readSnippet( "SharedDefinitions.hpp" ) },
                       { "SharedHandle", readSnippet( "SharedHandle.hpp" ) },
                       { "StridedArrayProxy", readSnippet( "StridedArrayProxy.hpp" ) },
                       { "StructureChain", readSnippet( "StructureChain.hpp" ) },
@@ -11539,16 +11537,17 @@ std::string VulkanHppGenerator::generateSharedHandle( std::pair<std::string, Han
       aliasHandle += replaceWithMap( aliasHandleTemplate, { { "aliasType", stripPrefix( aliasIt->first, "Vk" ) }, { "type", type } } );
     }
 
-    static const std::string uniqueHandleTemplate = R"(  template <>
+    static const std::string sharedHandleTemplate = R"(  template <>
   class SharedHandleTraits<${type}>
   {
   public:
-    using deleter = ${deleterType}${deleterAction}Shared<${deleterParent}${deleterPool}>;
+    using parent = ${deleterParent};
+    using deleter = ${deleterType}${deleterAction}Shared<${type}${deleterPool}>;
   };
   using Shared${type} = SharedHandle<${type}>;
 ${aliasHandle})";
 
-    return replaceWithMap( uniqueHandleTemplate,
+    return replaceWithMap( sharedHandleTemplate,
                            { { "aliasHandle", aliasHandle },
                              { "deleterAction", ( handleData.second.deleteCommand.substr( 2, 4 ) == "Free" ) ? "Free" : "Destroy" },
                              { "deleterParent", handleData.second.deleteParent.empty() ? "NoParent" : stripPrefix( handleData.second.deleteParent, "Vk" ) },
@@ -11578,7 +11577,7 @@ std::string VulkanHppGenerator::generateSharedHandle( std::vector<RequireData> c
 
 std::string VulkanHppGenerator::generateSharedHandles() const
 {
-  std::string uniqueHandlesTemplate = R"(
+  std::string sharedHandlesTemplate = R"(
 #ifndef VULKAN_HPP_NO_SMART_HANDLE
   //======================
   //=== SHARED HANDLEs ===
@@ -11588,18 +11587,18 @@ ${sharedHandles}
 #endif  /*VULKAN_HPP_NO_SMART_HANDLE*/
 )";
 
-  std::string uniqueHandles;
+  std::string sharedHandles;
   for ( auto const & feature : m_features )
   {
-    uniqueHandles += generateSharedHandle( feature.requireData, feature.name );
+    sharedHandles += generateSharedHandle( feature.requireData, feature.name );
   }
   for ( auto const & extension : m_extensions )
   {
-    uniqueHandles += generateSharedHandle( extension.requireData, extension.name );
+    sharedHandles += generateSharedHandle( extension.requireData, extension.name );
   }
-  assert( uniqueHandles.back() == '\n' );
-  uniqueHandles.pop_back();
-  return replaceWithMap( uniqueHandlesTemplate, { { "sharedHandles", uniqueHandles } } );
+  assert( sharedHandles.back() == '\n' );
+  sharedHandles.pop_back();
+  return replaceWithMap( sharedHandlesTemplate, { { "sharedHandles", sharedHandles } } );
 }
 
 std::string VulkanHppGenerator::generateVectorSizeCheck( std::string const &                           name,
