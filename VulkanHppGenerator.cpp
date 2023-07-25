@@ -521,7 +521,7 @@ ${constexprDefines}
 
 namespace VULKAN_HPP_NAMESPACE
 {
-${SharedImage}
+${SharedHandleSpecializations}
 
 #if !defined( VULKAN_HPP_DISABLE_ENHANCED_MODE )
 ${structExtendsStructs}
@@ -564,7 +564,7 @@ ${DispatchLoaderDynamic}
                       { "structExtendsStructs", generateStructExtendsStructs() },
                       { "ResultValue", readSnippet( "ResultValue.hpp" ) },
                       { "SharedHandle", readSnippet( "SharedHandle.hpp" ) },
-                      { "SharedImage", readSnippet( "SharedImage.hpp" ) },
+                      { "SharedHandleSpecializations", readSnippet( "SharedHandleSpecializations.hpp" ) },
                       { "StridedArrayProxy", readSnippet( "StridedArrayProxy.hpp" ) },
                       { "StructureChain", readSnippet( "StructureChain.hpp" ) },
                       { "throwResultException", generateThrowResultException() },
@@ -7156,6 +7156,7 @@ ${enter}  class ${className}
   public:
     using CType = Vk${className};
     using NativeType = Vk${className};
+    using ParentType = ${parent};
 
     static VULKAN_HPP_CONST_OR_CONSTEXPR VULKAN_HPP_NAMESPACE::ObjectType objectType = VULKAN_HPP_NAMESPACE::ObjectType::${objTypeEnum};
     static VULKAN_HPP_CONST_OR_CONSTEXPR VULKAN_HPP_NAMESPACE::DebugReportObjectTypeEXT debugReportObjectType = VULKAN_HPP_NAMESPACE::DebugReportObjectTypeEXT::${debugReportObjectType};
@@ -7240,6 +7241,7 @@ ${usingAlias}${leave})";
                              { "debugReportObjectType", debugReportObjectType },
                              { "enter", enter },
                              { "leave", leave },
+                             { "parent", handleData.second.deleteParent.empty() ? "NoParent" : stripPrefix( handleData.second.deleteParent, "Vk" ) },
                              { "memberName", startLowerCase( stripPrefix( handleData.first, "Vk" ) ) },
                              { "objTypeEnum", generateEnumValueName( enumIt->first, valueIt->name, false ) },
                              { "usingAlias", usingAlias },
@@ -11545,7 +11547,6 @@ std::string VulkanHppGenerator::generateSharedHandle( std::pair<std::string, Han
   class SharedHandleTraits<${type}>
   {
   public:
-    using parent = ${deleterParent};
     using deleter = ${deleterType}${deleterAction}Shared<${type}${deleterPool}>;
   };
   using Shared${type} = SharedHandle<${type}>;
@@ -11554,7 +11555,6 @@ ${aliasHandle})";
     return replaceWithMap( sharedHandleTemplate,
                            { { "aliasHandle", aliasHandle },
                              { "deleterAction", ( handleData.second.deleteCommand.substr( 2, 4 ) == "Free" ) ? "Free" : "Destroy" },
-                             { "deleterParent", handleData.second.deleteParent.empty() ? "NoParent" : stripPrefix( handleData.second.deleteParent, "Vk" ) },
                              { "deleterPool", handleData.second.deletePool.empty() ? "" : ", " + stripPrefix( handleData.second.deletePool, "Vk" ) },
                              { "deleterType", handleData.second.deletePool.empty() ? "Object" : "Pool" },
                              { "type", type } } );
